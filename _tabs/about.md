@@ -17,7 +17,7 @@ I specialize in:
 
 - **Email:** theblessone.sec@gmail.com
 - **GitHub:** [BlessedOn3](https://github.com/BlessedOn3)
-- **Twitter/X:** [@theblessOne](https://twitter.com/theblessOne)
+- **Twitter/X:** [@theblessOne](https://twitter.com/theblesskyd)
 
 ## CVEs / Advisories
 
