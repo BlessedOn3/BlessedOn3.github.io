@@ -1,7 +1,7 @@
 ---
 title: "HTB — Bashed (Easy Linux): phpbash Webshell + Cron Root"
 date: 2026-05-13 10:00:00 +0000
-categories: [CTF, HackTheBox]
+categories: [Machines, HackTheBox]
 tags: [hackthebox, linux, webshell, ffuf, cron, privesc, easy]
 ---
 

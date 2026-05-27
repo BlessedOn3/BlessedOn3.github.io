@@ -1,7 +1,7 @@
 ---
 title: "HTB — BountyHunter (Easy Linux): XXE + Python eval() sudo"
 date: 2026-05-13 12:00:00 +0000
-categories: [CTF, HackTheBox]
+categories: [Machines, HackTheBox]
 tags: [hackthebox, linux, xxe, lfi, php-filter, eval, sudo, privesc, easy]
 ---
 

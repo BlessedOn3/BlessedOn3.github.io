@@ -1,7 +1,7 @@
 ---
 title: "HTB — Redelegate (Hard Windows AD): FTP KeePass → Constrained Delegation S4U2Proxy"
 date: 2026-05-19 12:00:00 +0000
-categories: [CTF, HackTheBox, Active Directory]
+categories: [Machines, HackTheBox]
 tags: [hackthebox, windows, active-directory, keepass, constrained-delegation, s4u2proxy, secretsdump, pass-the-hash, hard]
 ---
 

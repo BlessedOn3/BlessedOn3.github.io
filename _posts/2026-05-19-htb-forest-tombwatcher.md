@@ -1,7 +1,7 @@
 ---
 title: "HTB — TombWatcher (Medium Windows AD): Kerberoast → gMSA → ESC15 (CVE-2024-49019)"
 date: 2026-05-19 10:00:00 +0000
-categories: [CTF, HackTheBox, Active Directory]
+categories: [Machines, HackTheBox]
 tags: [hackthebox, windows, active-directory, kerberoast, gmsa, adcs, esc15, cve-2024-49019, certipy, pass-the-hash, medium]
 ---
 

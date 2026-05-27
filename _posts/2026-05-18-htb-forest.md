@@ -1,7 +1,7 @@
 ---
 title: "HTB — Forest (Easy Windows AD): ASREPRoast + DCSync via Exchange WriteDACL"
 date: 2026-05-18 10:00:00 +0000
-categories: [CTF, HackTheBox, Active Directory]
+categories: [Machines, HackTheBox]
 tags: [hackthebox, windows, active-directory, asreproast, dcsync, exchange, writedacl, pass-the-hash, easy]
 ---
 
