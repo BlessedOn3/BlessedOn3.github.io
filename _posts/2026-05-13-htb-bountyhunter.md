@@ -11,11 +11,6 @@ tags: [hackthebox, linux, xxe, lfi, php-filter, eval, sudo, privesc, easy]
 
 Machine focused on XXE injection and code review. The bug bounty form sends base64-encoded XML, vulnerable to XXE. Using PHP filters we read `db.php` and obtain SSH credentials. Privilege escalation abuses a Python script with `eval()` that can be run as root via sudo.
 
-| Flag | Hash |
-|------|------|
-| user.txt | `b332b0ebf595b78c2afa16dde71497a0` |
-| root.txt | `3b7a3766b0dfdb69497f1ccb9cf8d63c` |
-
 ---
 
 ## 1. Reconnaissance
@@ -89,7 +84,7 @@ Password reused on the `development` user:
 ssh development@10.129.95.166
 # password: m19RoAU0hP41A1sTsq6K
 cat ~/user.txt
-# b332b0ebf595b78c2afa16dde71497a0
+# <hash>
 ```
 
 ---
@@ -124,7 +119,7 @@ __Ticket Code:__
 sudo /usr/bin/python3.8 /opt/skytrain_inc/ticketValidator.py <<< "/tmp/f.md"
 # root shell
 cat /root/root.txt
-# 3b7a3766b0dfdb69497f1ccb9cf8d63c
+# <hash>
 ```
 
 ---

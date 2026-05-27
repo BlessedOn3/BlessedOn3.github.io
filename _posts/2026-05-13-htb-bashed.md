@@ -11,11 +11,6 @@ tags: [hackthebox, linux, webshell, ffuf, cron, privesc, easy]
 
 Web fuzzing machine focused on finding exposed files. The entry point is a PHP webshell (`phpbash`) left in a development directory. Privilege escalation exploits a cron job running as root that executes Python scripts from a directory where the intermediate user has write access.
 
-| Flag | Hash |
-|------|------|
-| user.txt | `ab440b6b069d37839bcc6c121ec3d15a` |
-| root.txt | `15a4aa589334918af374ad1582293393` |
-
 ---
 
 ## 1. Reconnaissance
@@ -66,7 +61,7 @@ http://10.129.34.106/dev/phpbash.php
 
 ```bash
 cat /home/arrexel/user.txt
-# ab440b6b069d37839bcc6c121ec3d15a
+# <hash>
 ```
 
 ---
@@ -105,7 +100,7 @@ Within a minute the cron fires `test.py` as root → root shell received.
 
 ```bash
 cat /root/root.txt
-# 15a4aa589334918af374ad1582293393
+# <hash>
 ```
 
 ---

