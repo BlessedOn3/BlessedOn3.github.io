@@ -14,35 +14,29 @@ timezone:
 # jekyll-seo-tag settings › https://github.com/jekyll/jekyll-seo-tag/blob/master/docs/usage.md
 # ↓ --------------------------
 
-title: BlessedOn3Blog # the main title
+title: theblessOne
 
-tagline: A text-focused Jekyll theme # it will display as the subtitle
+tagline: Security Researcher | CVE Hunter | Bug Bounty
 
-description: >- # used by seo meta and the atom feed
-  A minimal, responsive and feature-rich Jekyll theme for technical writing.
+description: >-
+  Independent security researcher focused on CVE discovery, responsible disclosure, and bug bounty. Documenting vulnerabilities and PoCs.
 
 # Fill in the protocol & hostname for your site.
 # E.g. 'https://username.github.io', note that it does not end with a '/'.
-url: "https://blessedon3.github.io/"
+url: "https://blessedon3.github.io"
 
 github:
-  username: BlessedOn3 # change to your GitHub username
+  username: BlessedOn3
 
 twitter:
-  username: twitter_username # change to your Twitter username
+  username: theblessOne
 
 social:
-  # Change to your full name.
-  # It will be displayed as the default author of the posts and the copyright owner in the Footer
-  name: Mateus Gama
-  email: mateus.ambuzeirogama@gmail.com # change to your email address
+  name: theblessOne
+  email: theblessone.sec@gmail.com
   links:
-    # The first element serves as the copyright owner's link
-    - https://twitter.com/username # change to your Twitter homepage
-    - https://github.com/BlessedOn3 # change to your GitHub homepage
-    # Uncomment below to add more social links
-    # - https://www.facebook.com/username
-    # - https://www.linkedin.com/in/username
+    - https://twitter.com/theblessOne
+    - https://github.com/BlessedOn3
 
 # Site Verification Settings
 webmaster_verifications:
