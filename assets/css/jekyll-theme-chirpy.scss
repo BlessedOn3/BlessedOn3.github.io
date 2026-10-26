@@ -1,0 +1,63 @@
+---
+---
+
+@use 'abstracts/variables' with (
+  $theme: '{{ site.theme_mode }}'
+);
+
+/* prettier-ignore */
+@use 'main
+{%- if jekyll.environment == 'production' -%}
+  .bundle
+{%- endif -%}
+';
+
+/* append your custom style below */
+
+/* Bless rice theme: same colors as github.com/BlessedOn3/rice */
+:root,
+html[data-mode="light"] {
+  --main-bg: #f4f0ff;
+  --card-bg: #ffffff;
+  --text-color: #1e1a2e;
+  --heading-color: #2a1f4a;
+  --link-color: #7040e8;
+  --link-hover-color: #e840a1;
+  --sidebar-bg: #e8dbff;
+  --sidebar-color: #1e1a2e;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode="light"]) {
+    --main-bg: #030107;
+    --card-bg: #0b0814;
+    --text-color: #d1d1d1;
+    --heading-color: #ffffff;
+    --link-color: #a77ef5;
+    --link-hover-color: #f57eb6;
+    --sidebar-bg: #0b0814;
+    --sidebar-color: #d1d1d1;
+  }
+}
+
+html[data-mode="dark"] {
+  --main-bg: #030107;
+  --card-bg: #0b0814;
+  --text-color: #d1d1d1;
+  --heading-color: #ffffff;
+  --link-color: #a77ef5;
+  --link-hover-color: #f57eb6;
+  --sidebar-bg: #0b0814;
+  --sidebar-color: #d1d1d1;
+}
+
+/* Monospace headings and code, like the terminal */
+body,
+h1, h2, h3, h4, h5, h6,
+code, pre, kbd {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+pre, code {
+  border-radius: 8px;
+}
