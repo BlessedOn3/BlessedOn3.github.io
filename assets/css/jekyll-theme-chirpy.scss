@@ -15,8 +15,8 @@
 /* append your custom style below */
 
 /* Bless rice theme: same colors as github.com/BlessedOn3/rice */
-:root,
-html[data-mode="light"] {
+:root[data-bs-theme="light"],
+:root:not([data-bs-theme]) {
   --main-bg: #f4f0ff;
   --card-bg: #ffffff;
   --text-color: #1e1a2e;
@@ -25,10 +25,12 @@ html[data-mode="light"] {
   --link-hover-color: #e840a1;
   --sidebar-bg: #e8dbff;
   --sidebar-color: #1e1a2e;
+  --mask-bg: #c9bff0;
+  --main-border-color: #d8ccf5;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-mode="light"]) {
+  :root:not([data-bs-theme]) {
     --main-bg: #030107;
     --card-bg: #0b0814;
     --text-color: #d1d1d1;
@@ -37,10 +39,12 @@ html[data-mode="light"] {
     --link-hover-color: #f57eb6;
     --sidebar-bg: #0b0814;
     --sidebar-color: #d1d1d1;
+    --mask-bg: #1a1526;
+    --main-border-color: #1f1a2e;
   }
 }
 
-html[data-mode="dark"] {
+:root[data-bs-theme="dark"] {
   --main-bg: #030107;
   --card-bg: #0b0814;
   --text-color: #d1d1d1;
@@ -49,6 +53,8 @@ html[data-mode="dark"] {
   --link-hover-color: #f57eb6;
   --sidebar-bg: #0b0814;
   --sidebar-color: #d1d1d1;
+  --mask-bg: #1a1526;
+  --main-border-color: #1f1a2e;
 }
 
 /* Monospace headings and code, like the terminal */
